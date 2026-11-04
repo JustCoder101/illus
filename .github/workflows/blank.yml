@@ -1,0 +1,51 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch: # Позволяет запускать сборку вручную кнопкой
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y git zip unzip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libssl-dev cmake libffi-dev libltdl-dev
+
+    - name: Install Buildozer and Cython
+      run: |
+        pip install --upgrade pip
+        pip install buildozer cython
+
+    - name: Configure buildozer.spec
+      run: |
+        if [ ! -f buildozer.spec ]; then
+          buildozer init
+        fi
+        # Настройка под ваши точные параметры
+        sed -i 's/title = My Application/title = iLLuS/g' buildozer.spec
+        sed -i 's/package.name = myapp/package.name = illus/g' buildozer.spec
+        sed -i 's/package.domain = org.test/package.domain = com.krutoy/g' buildozer.spec
+        sed -i 's/requirements = .*/requirements = python3, pygame, hostpython3/g' buildozer.spec
+        sed -i 's/fullscreen = 0/fullscreen = 1/g' buildozer.spec
+        sed -i 's/#android.archs = arm64-v8a/android.archs = arm64-v8a/g' buildozer.spec
+
+    - name: Build with Buildozer
+      run: |
+        yes | buildozer -v android debug
+
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: iLLuS-APK
+        path: bin/*.apk
