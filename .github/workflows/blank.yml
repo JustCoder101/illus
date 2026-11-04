@@ -25,23 +25,29 @@ jobs:
     - name: Install Buildozer and Cython
       run: |
         pip install --upgrade pip
-        pip install buildozer cython
+        pip install "buildozer<1.6.0" "cython<3.0.0"
 
     - name: Configure buildozer.spec
       run: |
         if [ ! -f buildozer.spec ]; then
           buildozer init
         fi
-        # Настройка под ваши точные параметры
+        # Базовые настройки игры
         sed -i 's/title = My Application/title = iLLuS/g' buildozer.spec
         sed -i 's/package.name = myapp/package.name = illus/g' buildozer.spec
         sed -i 's/package.domain = org.test/package.domain = com.krutoy/g' buildozer.spec
-        sed -i 's/requirements = .*/requirements = python3, pygame, hostpython3/g' buildozer.spec
+        sed -i 's/requirements = .*/requirements = python3, pygame==2.5.2, hostpython3/g' buildozer.spec
         sed -i 's/fullscreen = 0/fullscreen = 1/g' buildozer.spec
         sed -i 's/#android.archs = arm64-v8a/android.archs = arm64-v8a/g' buildozer.spec
+        
+        # Фикс версий Android SDK и стабильного NDK 25b для PyGame
+        sed -i 's/#android.api = 31/android.api = 33/g' buildozer.spec
+        sed -i 's/#android.minapi = 21/android.minapi = 24/g' buildozer.spec
+        sed -i 's/#android.ndk =.*/android.ndk = 25b/g' buildozer.spec
 
     - name: Build with Buildozer
       run: |
+        # Автоматически соглашаемся со всеми лицензиями Android SDK
         yes | buildozer -v android debug
 
     - name: Upload APK Artifact
