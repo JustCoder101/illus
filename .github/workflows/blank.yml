@@ -17,6 +17,16 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Install Android Build-Tools and Platforms
+      run: |
+        # Принудительно ставим стабильные build-tools и платформу средствами GitHub
+        sdkmanager --install "build-tools;33.0.0" "platforms;android-33" "platform-tools"
+        # Автоматически принимаем абсолютно все лицензии
+        yes | sdkmanager --licenses
+
     - name: Install system dependencies
       run: |
         sudo apt-get update
@@ -32,30 +42,33 @@ jobs:
         if [ ! -f buildozer.spec ]; then
           buildozer init
         fi
-        # Базовые настройки проекта
+        # Базовые настройки игры
         sed -i 's/title = My Application/title = iLLuS/g' buildozer.spec
         sed -i 's/package.name = myapp/package.name = illus/g' buildozer.spec
         sed -i 's/package.domain = org.test/package.domain = com.krutoy/g' buildozer.spec
         sed -i 's/fullscreen = 0/fullscreen = 1/g' buildozer.spec
         sed -i 's/#android.archs = arm64-v8a/android.archs = arm64-v8a/g' buildozer.spec
         
-        # Настройки под PyGame 2
+        # Настройки PyGame 2
         sed -i 's/requirements = .*/requirements = python3, pygame==2.5.2, hostpython3, android/g' buildozer.spec
         sed -i 's/#p4a.branch = .*/p4a.branch = master/g' buildozer.spec
         
-        # Фиксация версий SDK/NDK и сброс Build-Tools на стабильную версию
+        # Перенаправляем Buildozer на уже установленный нами SDK
+        sed -i "s|#android.sdk_path =.*|android.sdk_path = ${ANDROID_HOME}|g" buildozer.spec
         sed -i 's/#android.api = 31/android.api = 33/g' buildozer.spec
         sed -i 's/#android.minapi = 21/android.minapi = 24/g' buildozer.spec
         sed -i 's/#android.ndk =.*/android.ndk = 25b/g' buildozer.spec
         sed -i 's/#android.build_tools_version =.*/android.build_tools_version = 33.0.0/g' buildozer.spec
 
-    - name: Pre-accept Android SDK Licenses
-      run: |
-        # Этот шаг находит менеджер лицензий Android SDK на виртуалке и насильно принимает их все
-        mkdir -p ~/.android
-        touch ~/.android/repositories.cfg
-        yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses || true
-
     - name: Build with Buildozer
+      run: |
+        # Запуск сборки
+        buildozer -v android debug
+
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: iLLuS-APK
+        path: bin/*.apk
       run: |
         buildozer -v android debug
