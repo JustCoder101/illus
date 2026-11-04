@@ -39,16 +39,23 @@ jobs:
         sed -i 's/fullscreen = 0/fullscreen = 1/g' buildozer.spec
         sed -i 's/#android.archs = arm64-v8a/android.archs = arm64-v8a/g' buildozer.spec
         
-        # Настройки сборщика под PyGame 2
+        # Настройки под PyGame 2
         sed -i 's/requirements = .*/requirements = python3, pygame==2.5.2, hostpython3, android/g' buildozer.spec
         sed -i 's/#p4a.branch = .*/p4a.branch = master/g' buildozer.spec
         
-        # Исправление SDK/NDK версий
+        # Фиксация версий SDK/NDK и сброс Build-Tools на стабильную версию
         sed -i 's/#android.api = 31/android.api = 33/g' buildozer.spec
         sed -i 's/#android.minapi = 21/android.minapi = 24/g' buildozer.spec
         sed -i 's/#android.ndk =.*/android.ndk = 25b/g' buildozer.spec
+        sed -i 's/#android.build_tools_version =.*/android.build_tools_version = 33.0.0/g' buildozer.spec
+
+    - name: Pre-accept Android SDK Licenses
+      run: |
+        # Этот шаг находит менеджер лицензий Android SDK на виртуалке и насильно принимает их все
+        mkdir -p ~/.android
+        touch ~/.android/repositories.cfg
+        yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
     - name: Build with Buildozer
       run: |
-        # Запуск сборки без использования ломающегося флага "yes"
         buildozer -v android debug
